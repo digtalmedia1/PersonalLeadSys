@@ -80,7 +80,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form submission triggered");
-    
+
     // Basic Validation
     if (!username || !password) {
         console.warn("Validation failed: Missing username or password");
@@ -99,10 +99,10 @@ const Login = () => {
     try {
       // Simulate biometric scan & network delay
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const result = login(username, password);
+
+      const result = await login(username, password);
       console.log("Login result:", result);
-      
+
       if (result.success) {
         setScanStatus('success');
         // Short delay to show success state before redirect
@@ -119,7 +119,6 @@ const Login = () => {
           description: result.error || 'Invalid credentials. Security protocols active.',
           variant: "destructive"
         });
-        setLoading(false);
       }
     } catch (error) {
       console.error("Login critical error:", error);
@@ -129,6 +128,7 @@ const Login = () => {
         description: 'Connection interrupted. Retrying protocols...',
         variant: "destructive"
       });
+    } finally {
       setLoading(false);
     }
   };
