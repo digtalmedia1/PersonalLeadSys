@@ -23,11 +23,13 @@ import Settings from '@/pages/Settings';
 import Brainstorm from '@/pages/Brainstorm';
 import MindMap from '@/pages/MindMap';
 import Contacts from '@/pages/Contacts';
-import { seedData } from '@/utils/seed';
+import { apiClient } from '@/services/apiClient';
+import { initializeApiStorage } from '@/services/apiStorage';
 
 function App() {
   useEffect(() => {
-    seedData();
+    apiClient.warmup();
+    initializeApiStorage();
   }, []);
 
   return (

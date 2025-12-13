@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useApiResource } from '@/hooks/useApiResource';
 
 const Projects = () => {
   const { toast } = useToast();
@@ -21,8 +22,7 @@ const Projects = () => {
   // --- State ---
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { items: projects, loading, createItem, updateItem, deleteItem, setItems } = useApiResource('projects');
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -75,41 +75,12 @@ const Projects = () => {
     { id: 'low', label: 'נמוכה', color: '#00D9FF' }
   ];
 
-  // --- Data Loading ---
   useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = () => {
-    try {
-      const storedProjects = JSON.parse(localStorage.getItem('empire_projects') || '[]');
-      
-      // Normalize legacy data if necessary
-      const normalizedProjects = storedProjects.map(p => ({
-        ...p,
-        category: p.category || 'web', // Default for legacy
-        priority: p.priority || 'medium',
-        budget: p.budget || 0,
-        progress: p.progress !== undefined ? p.progress : 0,
-        teamMembers: Array.isArray(p.teamMembers) ? p.teamMembers : (p.members || []),
-        technologies: Array.isArray(p.technologies) ? p.technologies : [],
-        startDate: p.startDate || new Date().toISOString(),
-        endDate: p.deadline || p.endDate || new Date(Date.now() + 30*24*60*60*1000).toISOString()
-      }));
-
-      setProjects(normalizedProjects);
-    } catch (error) {
-      console.error("Failed to load projects", error);
-      toast({ title: "שגיאה", description: "תקלה בטעינת הנתונים", variant: "destructive" });
-    } finally {
-      setLoading(false);
+    if (!loading && projects.length === 0) {
+      // keep data shape consistent for new installs
+      setItems([]);
     }
-  };
-
-  const saveProjects = (newProjects) => {
-    setProjects(newProjects);
-    localStorage.setItem('empire_projects', JSON.stringify(newProjects));
-  };
+  }, [loading, projects.length, setItems]);
 
   // --- Handlers ---
   const handleOpenModal = (project = null) => {
@@ -169,29 +140,25 @@ const Projects = () => {
     };
 
     if (editingProject) {
-      const updatedProjects = projects.map(p => 
-        p.id === editingProject.id ? { ...p, ...processedData } : p
-      );
-      saveProjects(updatedProjects);
-      toast({ title: "פרויקט עודכן", description: "השינויים נשמרו בהצלחה" });
+      updateItem(editingProject.id, processedData)
+        .then(() => toast({ title: "פרויקט עודכן", description: "השינויים נשמרו בהצלחה" }))
+        .catch(() => toast({ title: "שגיאה", description: "שמירה נכשלה", variant: 'destructive' }));
     } else {
-      const newProject = {
-        id: `proj_${Date.now()}`,
-        ...processedData
-      };
-      saveProjects([newProject, ...projects]);
-      toast({ title: "פרויקט נוצר", description: "הפרויקט נוסף למערכת בהצלחה" });
+      createItem(processedData)
+        .then(() => toast({ title: "פרויקט נוצר", description: "הפרויקט נוסף למערכת בהצלחה" }))
+        .catch(() => toast({ title: "שגיאה", description: "שמירה נכשלה", variant: 'destructive' }));
     }
     setIsModalOpen(false);
   };
 
   const handleDelete = () => {
     if (!projectToDelete) return;
-    const updatedProjects = projects.filter(p => p.id !== projectToDelete.id);
-    saveProjects(updatedProjects);
-    setIsDeleteAlertOpen(false);
-    setProjectToDelete(null);
-    toast({ title: "פרויקט נמחק", variant: "destructive" });
+    deleteItem(projectToDelete.id)
+      .then(() => toast({ title: "פרויקט נמחק", variant: "destructive" }))
+      .finally(() => {
+        setIsDeleteAlertOpen(false);
+        setProjectToDelete(null);
+      });
   };
 
   // --- Filtering & Stats ---
