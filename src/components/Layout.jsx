@@ -57,8 +57,8 @@ const Layout = () => {
   // Identify pages that need full screen (no padding)
   const isFullScreenPage = ['/mindmap', '/brainstorm'].includes(location.pathname);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
