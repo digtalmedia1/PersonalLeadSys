@@ -1,0 +1,12 @@
+## Pages
+- [- Lead Details](/leaddetail): No description available
+- [| Empire](/projectdetail): No description available
+- [Brainstorm & Planning - Empire CRM](/brainstorm): No description available
+- [Mind Maps - Empire CRM](/mindmap): No description available
+- [SECURE LOGIN - EMPIRE SYSTEM](/login): Secure Access Portal
+- [טבלת לידים - Empire Leads Hub](/leadstable): No description available
+- [לוח בקרה - Empire Leads Hub](/dashboard): No description available
+- [ניהול משימות - Empire CRM](/tasks): No description available
+- [ניהול פרויקטים - Empire CRM](/projects): No description available
+- [צנרת לידים - Empire CRM](/leadspipeline): No description available
+- [תיבת דואר - Empire Leads Hub](/inbox): No description available

@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0A0E27;
+  --text-primary: #ffffff;
+  --accent-color: #00D9FF;
+  --neon-glow: 0 0 10px #00D9FF;
+  --neon-border-opacity: 1;
+  --glass-blur: 10px;
+  --glass-opacity: 0.6;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Assistant', sans-serif;
+  direction: rtl;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dynamic Classes based on Theme Context */
+.neon-border {
+  border-color: var(--accent-color);
+  opacity: var(--neon-border-opacity);
+  box-shadow: var(--neon-glow);
+}
+
+.glass-panel {
+  background: rgba(10, 14, 39, var(--glass-opacity));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.text-accent {
+  color: var(--accent-color) !important;
+}
+
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+
+.border-accent {
+  border-color: var(--accent-color) !important;
+}
+
+/* Mode Overrides */
+.light body {
+  --bg-primary: #f3f4f6;
+  --text-primary: #111827;
+}
+
+.dark body {
+  --bg-primary: #0f172a;
+  --text-primary: #f8fafc;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a1f3c;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
