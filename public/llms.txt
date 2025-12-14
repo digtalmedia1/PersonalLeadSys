@@ -7,6 +7,7 @@
 - [טבלת לידים - Empire Leads Hub](/leadstable): No description available
 - [לוח בקרה - Empire Leads Hub](/dashboard): No description available
 - [ניהול משימות - Empire CRM](/tasks): No description available
+- [ניהול ערוצים - Empire CRM](/channels): No description available
 - [ניהול פרויקטים - Empire CRM](/projects): No description available
 - [צנרת לידים - Empire CRM](/leadspipeline): No description available
 - [תיבת דואר - Empire Leads Hub](/inbox): No description available
