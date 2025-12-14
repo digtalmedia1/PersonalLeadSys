@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import CalendarSidebar from '@/components/CalendarSidebar';
 import { useNavigate } from 'react-router-dom';
+import { getLeads } from '@/lib/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,14 +23,18 @@ const Dashboard = () => {
     { title: 'לידים חדשים החודש', value: '0', change: '0%', trend: 'neutral', icon: Activity, color: '#FFA500' },
   ]);
   const [recentLeads, setRecentLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    calculateStats();
+    loadDashboard();
   }, []);
 
-  const calculateStats = () => {
+  const loadDashboard = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const leads = JSON.parse(localStorage.getItem('empire_leads') || '[]');
+      const leads = await getLeads();
       const currentMonth = new Date().toISOString().slice(0, 7);
       
       const totalLeads = leads.length;
@@ -57,8 +62,10 @@ const Dashboard = () => {
       })));
 
     } catch (e) {
-      console.error("Error calculating dashboard stats", e);
+      console.error('Error calculating dashboard stats', e);
+      setError('שגיאה בטעינת הנתונים מהשרת.');
     }
+    setLoading(false);
   };
 
   const getTimeAgo = (dateString) => {
@@ -127,7 +134,7 @@ const Dashboard = () => {
 
           {/* Main Chart Area Placeholder */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
@@ -148,12 +155,16 @@ const Dashboard = () => {
             >
               <h3 className="text-lg font-bold text-white mb-6 border-b border-white/5 pb-4">פעילות אחרונה</h3>
               <div className="space-y-4">
-                {recentLeads.length === 0 ? (
+                {loading ? (
+                  <p className="text-center text-gray-500 py-4">טוען נתונים...</p>
+                ) : error ? (
+                  <p className="text-center text-red-400 py-4">{error}</p>
+                ) : recentLeads.length === 0 ? (
                   <p className="text-center text-gray-500 py-4">אין לידים חדשים להצגה</p>
                 ) : (
                   recentLeads.map((lead, i) => (
-                    <div 
-                      key={lead.id || i} 
+                    <div
+                      key={lead.id || i}
                       onClick={() => navigate(`/leads/${lead.id}`)}
                       className="flex items-center gap-4 p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group"
                     >
