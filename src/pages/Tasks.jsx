@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { getProjects, getChannels, getTasks, updateCachedTasks } from '@/lib/api';
 
 const Tasks = () => {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -69,27 +71,35 @@ const Tasks = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    try {
-      // Load Projects & Channels for dropdowns
-      const storedProjects = JSON.parse(localStorage.getItem('empire_projects') || '[]');
-      const storedChannels = JSON.parse(localStorage.getItem('empire_channels') || '[]');
-      setProjects(storedProjects);
-      setChannels(storedChannels);
+  const normalizeTask = (task) => ({
+    ...task,
+    title: task.title || 'משימה ללא כותרת',
+    description: task.description || '',
+    dueDate: task.dueDate || task.due_date || task.date || '',
+    dueTime: task.dueTime || task.due_time || '',
+    priority: task.priority || 'medium',
+    status: task.status || (task.completed ? 'completed' : 'todo'),
+    projectId: task.projectId || task.project_id || '',
+    channelId: task.channelId || task.channel_id || '',
+    progress: typeof task.progress === 'number' ? task.progress : task.status === 'completed' ? 100 : 0
+  });
 
-      // Load Tasks
-      const storedTasks = JSON.parse(localStorage.getItem('empire_tasks') || '[]');
-      // Normalize tasks just in case
-      const normalizedTasks = storedTasks.map(t => ({
-        ...t,
-        progress: t.progress || 0,
-        status: t.status || (t.completed ? 'completed' : 'todo'), // Migration for old 'completed' boolean
-        channelId: t.channelId || '',
-        projectId: t.projectId || ''
-      }));
-      setTasks(normalizedTasks);
-    } catch (error) {
-      console.error("Failed to load tasks data", error);
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [fetchedProjects, fetchedChannels, fetchedTasks] = await Promise.all([
+        getProjects(),
+        getChannels(),
+        getTasks()
+      ]);
+
+      setProjects(fetchedProjects);
+      setChannels(fetchedChannels);
+      setTasks(fetchedTasks.map(normalizeTask));
+    } catch (err) {
+      console.error('Failed to load tasks data', err);
+      setError('טעינת משימות נכשלה מהשרת.');
       toast({ title: "שגיאה", description: "תקלה בטעינת הנתונים", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -98,7 +108,7 @@ const Tasks = () => {
 
   const saveTasks = (newTasks) => {
     setTasks(newTasks);
-    localStorage.setItem('empire_tasks', JSON.stringify(newTasks));
+    updateCachedTasks(newTasks);
   };
 
   // --- Handlers ---
@@ -192,20 +202,24 @@ const Tasks = () => {
 
   // --- Filtering & Stats ---
   const filteredTasks = tasks.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          t.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (t.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filters.status === 'all' || t.status === filters.status;
     const matchesPriority = filters.priority === 'all' || t.priority === filters.priority;
     const matchesProject = filters.project === 'all' || t.projectId === filters.project;
     const matchesChannel = filters.channel === 'all' || t.channelId === filters.channel;
-    
+
     return matchesSearch && matchesStatus && matchesPriority && matchesProject && matchesChannel;
   });
 
   const stats = {
     total: tasks.length,
     completed: tasks.filter(t => t.status === 'completed').length,
-    overdue: tasks.filter(t => t.status !== 'completed' && new Date(t.dueDate + 'T' + (t.dueTime || '23:59')) < new Date()).length,
+    overdue: tasks.filter(t => {
+      if (t.status === 'completed' || !t.dueDate) return false;
+      const dueDateTime = new Date(`${t.dueDate}T${t.dueTime || '23:59'}`);
+      return !Number.isNaN(dueDateTime.getTime()) && dueDateTime < new Date();
+    }).length,
     highPriority: tasks.filter(t => t.priority === 'high' && t.status !== 'completed').length
   };
 
@@ -347,6 +361,10 @@ const Tasks = () => {
         )}>
            {loading ? (
              <div className="col-span-full py-20 text-center text-gray-500">טוען משימות...</div>
+           ) : error ? (
+             <div className="col-span-full py-12 text-center text-red-400 bg-red-500/5 border border-red-500/30 rounded-2xl">
+               {error}
+             </div>
            ) : filteredTasks.length === 0 ? (
              <div className="col-span-full py-20 text-center bg-[#0A0E27]/30 border border-dashed border-white/10 rounded-2xl">
                <CheckSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
