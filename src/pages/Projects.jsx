@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { getProjects, updateCachedProjects } from '@/lib/api';
 
 const Projects = () => {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ const Projects = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -80,12 +82,14 @@ const Projects = () => {
     loadProjects();
   }, []);
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const storedProjects = JSON.parse(localStorage.getItem('empire_projects') || '[]');
-      
+      const remoteProjects = await getProjects();
+
       // Normalize legacy data if necessary
-      const normalizedProjects = storedProjects.map(p => ({
+      const normalizedProjects = remoteProjects.map(p => ({
         ...p,
         category: p.category || 'web', // Default for legacy
         priority: p.priority || 'medium',
@@ -99,7 +103,8 @@ const Projects = () => {
 
       setProjects(normalizedProjects);
     } catch (error) {
-      console.error("Failed to load projects", error);
+      console.error('Failed to load projects', error);
+      setError('תקלה בטעינת הנתונים מהשרת');
       toast({ title: "שגיאה", description: "תקלה בטעינת הנתונים", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -108,7 +113,7 @@ const Projects = () => {
 
   const saveProjects = (newProjects) => {
     setProjects(newProjects);
-    localStorage.setItem('empire_projects', JSON.stringify(newProjects));
+    updateCachedProjects(newProjects);
   };
 
   // --- Handlers ---

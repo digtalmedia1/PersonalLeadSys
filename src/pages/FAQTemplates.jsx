@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, MessageSquare, Copy, Sparkles, Code2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Copy, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { getFaqTemplates, updateCachedFaqTemplates } from '@/lib/api';
 
 const FAQTemplates = () => {
   const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [formData, setFormData] = useState({ title: '', content: '', category: 'כללי' });
@@ -18,23 +21,29 @@ const FAQTemplates = () => {
     loadTemplates();
   }, []);
 
-  const loadTemplates = () => {
-    const stored = localStorage.getItem('empire_faq_templates');
-    if (stored) {
-      setTemplates(JSON.parse(stored));
-    } else {
-      // Seed Data
-      const seed = [
-        { id: '1', title: 'הודעת פתיחה', content: 'היי, תודה שפנית אלינו! איך נוכל לעזור?', category: 'כללי', created_at: new Date().toISOString() },
-        { id: '2', title: 'מחירים', content: 'המחיר לשעת ייעוץ הוא 500 ש"ח + מע"מ.', category: 'מכירות', created_at: new Date().toISOString() }
-      ];
-      setTemplates(seed);
-      localStorage.setItem('empire_faq_templates', JSON.stringify(seed));
+  const loadTemplates = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const remoteTemplates = await getFaqTemplates();
+      const normalized = remoteTemplates.map((t, idx) => ({
+        id: t.id || `faq_${Date.now()}_${idx}`,
+        title: t.title || t.question || 'ללא כותרת',
+        content: t.content || t.answer || '',
+        category: t.category || 'כללי',
+        created_at: t.created_at || new Date().toISOString(),
+      }));
+      setTemplates(normalized);
+    } catch (err) {
+      console.error('Failed to load FAQ templates', err);
+      setError('טעינת התבניות מהשרת נכשלה');
+    } finally {
+      setLoading(false);
     }
   };
 
   const saveTemplates = (newTemplates) => {
-    localStorage.setItem('empire_faq_templates', JSON.stringify(newTemplates));
+    updateCachedFaqTemplates(newTemplates);
     setTemplates(newTemplates);
   };
 
@@ -125,7 +134,13 @@ const FAQTemplates = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           {categories.map(category => (
+           {loading ? (
+             <p className="text-center text-gray-400 col-span-full">טוען תבניות...</p>
+           ) : error ? (
+             <p className="text-center text-red-400 col-span-full">{error}</p>
+           ) : categories.length === 0 ? (
+             <p className="text-center text-gray-500 col-span-full">לא קיימות תבניות להצגה</p>
+           ) : categories.map(category => (
              <React.Fragment key={category}>
                <div className="col-span-full flex items-center gap-2 mt-4 mb-2">
                  <Sparkles className="w-4 h-4 text-[#00D9FF]" />

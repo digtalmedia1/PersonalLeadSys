@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { getChannels, updateCachedChannels } from '@/lib/api';
 
 const Channels = () => {
   const { toast } = useToast();
@@ -20,6 +21,7 @@ const Channels = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,53 +56,27 @@ const Channels = () => {
     loadChannels();
   }, []);
 
-  const loadChannels = () => {
+  const normalizeChannel = (channel) => ({
+    id: channel.id,
+    name: channel.name || 'ערוץ ללא שם',
+    type: channel.type || channel.channel_type || 'api',
+    source: channel.source || channel.project_id || 'לא צוין מקור',
+    webhook: channel.webhook || channel.webhook_url || '',
+    status: channel.status || 'active',
+    description: channel.description || channel.notes || '',
+    events: channel.events ?? channel.metrics?.events ?? 0,
+    lastActive: channel.lastActive || channel.last_active || channel.updated_at || channel.created_at || new Date().toISOString()
+  });
+
+  const loadChannels = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const stored = localStorage.getItem('empire_channels');
-      if (stored) {
-        setChannels(JSON.parse(stored));
-      } else {
-        // Seed initial data
-        const initialData = [
-          { 
-            id: 'ch_1', 
-            name: 'דף נחיתה ראשי', 
-            type: 'website', 
-            source: 'landing.empire.com', 
-            webhook: 'https://api.empire.com/wh/landing_main', 
-            status: 'active',
-            description: 'טופס לידים מדף הנחיתה הראשי של הקמפיין',
-            events: 1450,
-            lastActive: new Date().toISOString()
-          },
-          { 
-            id: 'ch_2', 
-            name: 'בוט מכירות וואטסאפ', 
-            type: 'whatsapp', 
-            source: '+972509999999', 
-            webhook: 'https://api.empire.com/wh/wa_bot_sales', 
-            status: 'active',
-            description: 'בוט אוטומטי לסינון ראשוני של לידים',
-            events: 850,
-            lastActive: new Date(Date.now() - 3600000).toISOString()
-          },
-          { 
-            id: 'ch_3', 
-            name: 'אפליקציית שירות', 
-            type: 'mobile', 
-            source: 'app-store-id', 
-            webhook: 'https://api.empire.com/wh/mobile_app_v2', 
-            status: 'inactive',
-            description: 'ערוץ לקבלת פניות טכניות מהאפליקציה',
-            events: 0,
-            lastActive: new Date(Date.now() - 86400000 * 5).toISOString()
-          }
-        ];
-        setChannels(initialData);
-        localStorage.setItem('empire_channels', JSON.stringify(initialData));
-      }
-    } catch (error) {
-      console.error("Failed to load channels", error);
+      const fetched = await getChannels();
+      setChannels(fetched.map(normalizeChannel));
+    } catch (err) {
+      console.error('Failed to load channels', err);
+      setError('טעינת הערוצים נכשלה מהשרת.');
     } finally {
       setLoading(false);
     }
@@ -108,7 +84,7 @@ const Channels = () => {
 
   const saveChannels = (newChannels) => {
     setChannels(newChannels);
-    localStorage.setItem('empire_channels', JSON.stringify(newChannels));
+    updateCachedChannels(newChannels);
   };
 
   // --- Actions ---
@@ -303,6 +279,10 @@ const Channels = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
            {loading ? (
              <div className="col-span-full py-20 text-center text-gray-500">טוען ערוצים...</div>
+           ) : error ? (
+             <div className="col-span-full py-12 text-center text-red-400 bg-red-500/5 border border-red-500/30 rounded-2xl">
+               {error}
+             </div>
            ) : filteredChannels.length === 0 ? (
              <div className="col-span-full py-20 text-center bg-[#0A0E27]/30 border border-dashed border-white/10 rounded-2xl">
                <Radio className="w-12 h-12 text-gray-600 mx-auto mb-4" />

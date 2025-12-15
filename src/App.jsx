@@ -1,9 +1,8 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
@@ -23,21 +22,33 @@ import Settings from '@/pages/Settings';
 import Brainstorm from '@/pages/Brainstorm';
 import MindMap from '@/pages/MindMap';
 import Contacts from '@/pages/Contacts';
-import { seedData } from '@/utils/seed';
+import { prefetchAppData } from '@/lib/api';
+
+const DataBootstrapper = () => {
+  const { isAuthenticated } = useAuth();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      prefetchAppData().catch((err) => console.warn('Prefetch failed', err));
+    }
+  }, [isAuthenticated]);
+
+  return null;
+};
 
 function App() {
-  useEffect(() => {
-    seedData();
-  }, []);
-
   return (
     <>
       <Helmet>
         <title>Empire Leads Hub - CRM System</title>
-        <meta name="description" content="Complete internal CRM system for managing leads, channels, projects, and customer communications" />
+        <meta
+          name="description"
+          content="Complete internal CRM system for managing leads, channels, projects, and customer communications"
+        />
       </Helmet>
       <AuthProvider>
         <ThemeProvider>
+          <DataBootstrapper />
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />

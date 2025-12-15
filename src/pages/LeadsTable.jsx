@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { getLeads, updateCachedLeads } from '@/lib/api';
 
 const LeadsTable = () => {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ const LeadsTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [leads, setLeads] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -36,11 +39,13 @@ const LeadsTable = () => {
     loadLeads();
   }, []);
 
-  const loadLeads = () => {
+  const loadLeads = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const storedLeads = JSON.parse(localStorage.getItem('empire_leads') || '[]');
+      const fetchedLeads = await getLeads();
       // Enhance leads if missing data for UI
-      const enhancedLeads = storedLeads.map(l => ({
+      const enhancedLeads = fetchedLeads.map(l => ({
         ...l,
         name: l.contact_name || l.title || 'Unknown',
         email: l.email || 'no-email@provided.com', // Placeholder if not in seed
@@ -50,13 +55,15 @@ const LeadsTable = () => {
       }));
       setLeads(enhancedLeads);
     } catch (error) {
-      console.error("Failed to load leads", error);
+      console.error('Failed to load leads', error);
+      setError('טעינת נתוני הלידים נכשלה');
     }
+    setLoading(false);
   };
 
   const saveLeads = (newLeads) => {
     setLeads(newLeads);
-    localStorage.setItem('empire_leads', JSON.stringify(newLeads));
+    updateCachedLeads(newLeads);
   };
 
   const handleAddLead = (e) => {
@@ -278,7 +285,15 @@ const LeadsTable = () => {
                  </tr>
                </thead>
                <tbody className="divide-y divide-white/5">
-                 {filteredLeads.length === 0 ? (
+                 {loading ? (
+                   <tr>
+                     <td colSpan={6} className="p-8 text-center text-gray-500">טוען נתוני לידים...</td>
+                   </tr>
+                 ) : error ? (
+                   <tr>
+                     <td colSpan={6} className="p-8 text-center text-red-400">{error}</td>
+                   </tr>
+                 ) : filteredLeads.length === 0 ? (
                    <tr>
                      <td colSpan={6} className="p-8 text-center text-gray-500">
                        לא נמצאו לידים תואמים לחיפוש
@@ -286,7 +301,7 @@ const LeadsTable = () => {
                    </tr>
                  ) : (
                    filteredLeads.map((lead, i) => (
-                     <motion.tr 
+                     <motion.tr
                        key={lead.id}
                        initial={{ opacity: 0, x: -20 }}
                        animate={{ opacity: 1, x: 0 }}

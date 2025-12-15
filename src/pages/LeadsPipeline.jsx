@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { getLeads, getProjects, updateCachedLeads } from '@/lib/api';
 
 // --- Constants ---
 const STAGES = {
@@ -35,6 +36,7 @@ const LeadsPipeline = () => {
   const [leads, setLeads] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [draggedLead, setDraggedLead] = useState(null);
   
   // Filters
@@ -72,52 +74,38 @@ const LeadsPipeline = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      // Load Projects
-      const storedProjects = JSON.parse(localStorage.getItem('empire_projects') || '[]');
-      setProjects(storedProjects);
+      const [remoteProjects, remoteLeads] = await Promise.all([
+        getProjects(),
+        getLeads(),
+      ]);
 
-      // Load Leads
-      const storedLeads = JSON.parse(localStorage.getItem('empire_leads') || '[]');
-      
-      // Seed data if empty for demonstration
-      if (storedLeads.length === 0) {
-        const seedLeads = [
-          {
-            id: 'l_1',
-            title: 'פיתוח מערכת CRM',
-            contact_name: 'ישראל ישראלי',
-            value: 15000,
-            status: 'new',
-            priority: 'high',
-            projectId: '',
-            customProjectName: 'סטארטאפ X',
-            assignee: 'Sales Manager',
-            dueDate: '2024-03-01',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'l_2',
-            title: 'דף נחיתה לקמפיין',
-            contact_name: 'רונית כהן',
-            value: 2500,
-            status: 'negotiation',
-            priority: 'medium',
-            projectId: storedProjects[0]?.id || '',
-            customProjectName: '',
-            assignee: 'Admin',
-            dueDate: '2024-02-20',
-            createdAt: new Date().toISOString()
-          }
-        ];
-        setLeads(seedLeads);
-        localStorage.setItem('empire_leads', JSON.stringify(seedLeads));
-      } else {
-        setLeads(storedLeads);
-      }
-    } catch (error) {
-      console.error("Failed to load pipeline data", error);
+      setProjects(remoteProjects || []);
+
+      const normalizedLeads = (remoteLeads || []).map((lead, idx) => ({
+        id: lead.id || `lead_${Date.now()}_${idx}`,
+        title: lead.title || lead.contact_name || 'ליד ללא שם',
+        contact_name: lead.contact_name || lead.name || '',
+        email: lead.email || '',
+        phone: lead.phone || '',
+        value: Number(lead.value) || 0,
+        status: STAGES[lead.status]?.id || lead.status || 'new',
+        priority: lead.priority || 'medium',
+        assignee: lead.assignee || '',
+        dueDate: lead.dueDate || lead.due_date || '',
+        projectId: lead.projectId || lead.project_id || '',
+        customProjectName: lead.customProjectName || lead.projectName || lead.custom_project_name || '',
+        projectName: lead.projectName || lead.project_name || '',
+        createdAt: lead.createdAt || lead.created_at || new Date().toISOString(),
+      }));
+
+      setLeads(normalizedLeads);
+    } catch (err) {
+      console.error("Failed to load pipeline data", err);
+      setError('טעינת נתוני הצנרת מהשרת נכשלה');
       toast({ title: "שגיאה", description: "תקלה בטעינת הנתונים", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -126,7 +114,7 @@ const LeadsPipeline = () => {
 
   const saveLeads = (newLeads) => {
     setLeads(newLeads);
-    localStorage.setItem('empire_leads', JSON.stringify(newLeads));
+    updateCachedLeads(newLeads);
   };
 
   // --- Handlers: DnD ---
@@ -330,7 +318,7 @@ const LeadsPipeline = () => {
         <div className="bg-[#0A0E27]/60 border border-[#00D9FF]/10 backdrop-blur-xl p-3 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-center mb-6 shrink-0 z-10">
            <div className="relative w-full md:w-64">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input 
+              <input
                 type="text" 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -365,13 +353,22 @@ const LeadsPipeline = () => {
                  className="bg-[#050A18] border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-300 focus:border-[#00D9FF] outline-none"
               >
                  <option value="all">כל הצוות</option>
-                 {TEAM_MEMBERS.map(tm => <option key={tm} value={tm}>{tm}</option>)}
+                {TEAM_MEMBERS.map(tm => <option key={tm} value={tm}>{tm}</option>)}
               </select>
            </div>
         </div>
 
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl mb-4">
+            {error}
+          </div>
+        )}
+
         {/* Pipeline Board */}
-        <div className="flex gap-6 overflow-x-auto pb-6 flex-1 min-h-0">
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-gray-400">טוען נתוני צנרת...</div>
+        ) : (
+          <div className="flex gap-6 overflow-x-auto pb-6 flex-1 min-h-0">
            {Object.values(STAGES).map((stage) => {
              const stageLeads = getStageLeads(stage.id);
              return (
@@ -490,9 +487,10 @@ const LeadsPipeline = () => {
                      )}
                   </div>
                </div>
-             );
-           })}
+            );
+          })}
         </div>
+        )}
 
         {/* --- Modal: Add/Edit Lead --- */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
