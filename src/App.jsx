@@ -23,6 +23,7 @@ import Settings from '@/pages/Settings';
 import Brainstorm from '@/pages/Brainstorm';
 import MindMap from '@/pages/MindMap';
 import Contacts from '@/pages/Contacts';
+import NotFound from '@/pages/NotFound';
 import { seedData } from '@/utils/seed';
 
 function App() {
@@ -58,7 +59,9 @@ function App() {
                 <Route path="faq-templates" element={<FAQTemplates />} />
                 <Route path="finance" element={<Finance />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
               </Route>
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>
         </ThemeProvider>
