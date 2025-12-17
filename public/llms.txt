@@ -4,6 +4,7 @@
 - [Brainstorm & Planning - Empire CRM](/brainstorm): No description available
 - [Mind Maps - Empire CRM](/mindmap): No description available
 - [SECURE LOGIN - EMPIRE SYSTEM](/login): Secure Access Portal
+- [הדף לא נמצא | Empire Leads Hub](/notfound): הדף שחיפשת לא קיים במערכת. חזור ללוח הבקרה או לנווט מחדש.
 - [טבלת לידים - Empire Leads Hub](/leadstable): No description available
 - [לוח בקרה - Empire Leads Hub](/dashboard): No description available
 - [ניהול משימות - Empire CRM](/tasks): No description available
